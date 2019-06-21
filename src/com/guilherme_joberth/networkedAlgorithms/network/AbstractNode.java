@@ -1,6 +1,7 @@
 package com.guilherme_joberth.networkedAlgorithms.network;
 
 import com.guilherme_joberth.networkedAlgorithms.algorithm.Algorithm;
+import com.sun.istack.internal.Nullable;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -53,7 +54,17 @@ public abstract class AbstractNode implements Runnable {
 
     abstract void processObject(String operation, Object obj, Socket client);
 
-    abstract void processMessage(String message, Socket client);
+    void processMessage(String message, Socket client){
+
+        if (message.contains(Operations.REGISTER)){
+
+            this.registerNode(message);
+
+        }else if (message.contains(Operations.REMOVE)){
+
+            this.removeNode(message);
+        }
+    }
 
     abstract boolean isMaster();
 
@@ -73,6 +84,11 @@ public abstract class AbstractNode implements Runnable {
         String message = Operations.EXECUTE_GENERATION;
 
         Socket s = connectNode(c);
+        send(s, intent, message, alg);
+    }
+
+    synchronized void send(Socket s, String intent, String message, @Nullable Object o) throws IOException{
+
         ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
 
         out.writeObject(intent);
@@ -81,12 +97,15 @@ public abstract class AbstractNode implements Runnable {
         out.writeObject(message);
         out.flush();
 
-        out.writeObject(alg);
-        out.flush();
+        if (o != null) {
+            out.writeObject(o);
+            out.flush();
+        }
 
         out.close();
         s.close();
     }
+
 
     synchronized void registerNode(String address){
 
@@ -133,6 +152,7 @@ public abstract class AbstractNode implements Runnable {
 
 
         this.connections.add(connection);
+        printCurrentNodes();
 
     }
 
@@ -259,6 +279,16 @@ public abstract class AbstractNode implements Runnable {
     static void log(String id, String message){
 
         System.out.println("[" + id + "]" + message);
+
+    }
+
+    synchronized void printCurrentNodes(){
+        String str = "";
+
+        for (NodeConnection connection : connections) {
+            str += "\n" + connection.toString();
+        }
+        log(id, "Current connections (" + connections.size() + "):" + str + "\n");
 
     }
 

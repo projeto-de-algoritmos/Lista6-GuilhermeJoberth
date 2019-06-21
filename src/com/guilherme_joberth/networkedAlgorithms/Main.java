@@ -67,6 +67,7 @@ public class Main {
                         restrictions.add(new RepeatedRestriction());
 
                         Algorithm alg = new GeneticAlgorithm(restrictions, ids);
+                        System.out.println("[MAIN] Creating algorithm #" + ids);
                         ids++;
 
                         Thread t = new Thread(() -> masterNode.startAlgorithm(alg));

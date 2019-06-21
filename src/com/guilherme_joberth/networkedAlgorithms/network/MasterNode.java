@@ -2,6 +2,7 @@ package com.guilherme_joberth.networkedAlgorithms.network;
 
 import com.guilherme_joberth.networkedAlgorithms.algorithm.Algorithm;
 
+import javax.swing.*;
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
@@ -38,19 +39,6 @@ public class MasterNode extends AbstractNode {
     @Override
     boolean isMaster() {
         return true;
-    }
-
-    @Override
-    void processMessage(String message, Socket client) {
-
-        if (message.contains(Operations.REGISTER)){
-
-           this.registerNode(message);
-
-        }else if (message.contains(Operations.REMOVE)){
-
-            this.removeNode(message);
-        }
     }
 
     @Override
@@ -96,17 +84,24 @@ public class MasterNode extends AbstractNode {
 
     public synchronized void startAlgorithm(Algorithm alg){
 
+        log(id, "Starting algorithm#" + alg.getId());
         passAlgorithm(alg);
 
     }
 
     public void printResult(Algorithm algorithm){
 
-        log(id, "Algorithm " + algorithm.getId() + " finished!");
 
-        System.out.println("----------------------------------\nResult: ");
-        System.out.println(algorithm.result());
-        System.out.println("----------------------------------");
+        String message = "Algorithm " + algorithm.getId() + " finished!";
+        log(id, message);
+
+        message += "\n" + algorithm.result();
+
+        String f_message = message;
+        Thread t = new Thread(() ->
+                JOptionPane.showMessageDialog(null, f_message, "Result", JOptionPane.INFORMATION_MESSAGE)
+        );
+        t.start();
 
     }
 

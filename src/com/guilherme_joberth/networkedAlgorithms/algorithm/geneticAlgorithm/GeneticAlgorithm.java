@@ -66,7 +66,10 @@ public class GeneticAlgorithm implements Serializable, Algorithm {
         this.generationsRun++;
 
         try {
-            Thread.currentThread().sleep(ThreadLocalRandom.current().nextInt(500,2000));
+            int sleep = ThreadLocalRandom.current().nextInt(0,250);
+            System.out.println("[ALGORITHM" + this.getId() + "] Sleeping for " + sleep + "ms");
+            Thread.currentThread().sleep(sleep);
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

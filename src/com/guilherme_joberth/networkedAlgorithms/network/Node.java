@@ -65,14 +65,10 @@ public class Node extends AbstractNode  {
         String intent = Operations.MESSAGE;
         String message = Operations.REMOVE + this.inputSocket.getInetAddress().getHostAddress() + ':' + this.localPort;
 
-        Socket s = null;
         try {
 
-            s = connectMaster();
-            ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-
-            out.writeObject(intent);
-            out.writeObject(message);
+            Socket s = connectMaster();
+            send(s, intent, message, null);
 
         } catch (IOException e) {
 
@@ -89,20 +85,21 @@ public class Node extends AbstractNode  {
         log(id, "Registering on master node");
 
         String intent = Operations.MESSAGE;
-        String message = Operations.REGISTER + this.inputSocket.getInetAddress().getHostAddress() + ':' + this.inputSocket.getLocalPort();
+        String message = Operations.REGISTER + this.inputSocket.getInetAddress().getHostAddress() + ':' + localPort;
 
         Socket s = connectMaster();
-        ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+        send(s, intent, message, null);
+    }
 
-        out.writeObject(intent);
-        out.flush();
+    private void registerOnNode(NodeConnection c) throws IOException {
 
-        out.writeObject(message);
-        out.flush();
+        log(id, "Registering on node" + c.toString());
 
-        out.close();
+        String intent = Operations.MESSAGE;
+        String message = Operations.REGISTER + this.inputSocket.getInetAddress().getHostAddress() + ':' + localPort;
 
-        s.close();
+        Socket s = connectNode(c);
+        send(s, intent, message, null);
     }
 
     @Override
@@ -111,6 +108,8 @@ public class Node extends AbstractNode  {
         if (message.contains(Operations.CHECK_BUSY)){
             answerBusy(client);
         }
+
+        super.processMessage(message, client);
     }
 
     private void answerBusy(Socket client){
@@ -164,7 +163,6 @@ public class Node extends AbstractNode  {
 
             log(id, "Received " + received.size() + " shared connections");
 
-
             try {
                 NodeConnection selfConnection = new NodeConnection(this.inputSocket.getInetAddress().getHostAddress(), localPort);
 
@@ -179,19 +177,24 @@ public class Node extends AbstractNode  {
                         connections.add(c);
                         added++;
 
-                        registerNode(c.toString());
+                        registerOnNode(c);
                     }
                 }
 
                 log(id, "Added new " + added + " connections");
+                printCurrentNodes();
 
             } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
 
         }
 
     }
+
+
 
     synchronized void runnerCallback(AlgorithmRunner runner){
 
