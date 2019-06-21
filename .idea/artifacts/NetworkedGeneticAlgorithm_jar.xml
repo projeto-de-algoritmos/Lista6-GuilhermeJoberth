@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="NetworkedGeneticAlgorithm:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/NetworkedGeneticAlgorithm_jar</output-path>
+    <root id="archive" name="NetworkedGeneticAlgorithm.jar">
+      <element id="module-output" name="NetworkedGeneticAlgorithm" />
+    </root>
+  </artifact>
+</component>
