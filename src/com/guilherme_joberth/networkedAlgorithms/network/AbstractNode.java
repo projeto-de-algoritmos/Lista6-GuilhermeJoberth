@@ -2,16 +2,18 @@ package com.guilherme_joberth.networkedAlgorithms.network;
 
 import com.guilherme_joberth.networkedAlgorithms.algorithm.Algorithm;
 import com.sun.istack.internal.Nullable;
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+import jdk.nashorn.internal.codegen.CompilerConstants;
+import org.omg.CORBA.INTERNAL;
+import sun.awt.Mutex;
+import sun.awt.image.ImageWatched;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.DatagramPacket;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.Iterator;
-import java.util.Set;
+import java.net.*;
+import java.util.*;
 
 public abstract class AbstractNode implements Runnable {
 
@@ -25,6 +27,8 @@ public abstract class AbstractNode implements Runnable {
 
     String id;
 
+    Mutex connectionLock = new Mutex();
+
     synchronized void processIntent(String intent, ObjectInputStream inputStream, Socket client) throws IOException, ClassNotFoundException {
 
 
@@ -36,7 +40,7 @@ public abstract class AbstractNode implements Runnable {
 
             log(id, "Message: " + message);
 
-            this.processMessage(message, client);
+            this.processMessage(message, client, inputStream);
 
         }
 
@@ -47,14 +51,14 @@ public abstract class AbstractNode implements Runnable {
 
             log(id, "Object with operation: " + operation);
 
-            this.processObject(operation, obj, client);
+            this.processObject(operation, obj, client, inputStream);
 
         }
     }
 
-    abstract void processObject(String operation, Object obj, Socket client);
+    abstract void processObject(String operation, Object obj, Socket client, ObjectInputStream inputStream);
 
-    void processMessage(String message, Socket client){
+    void processMessage(String message, Socket client, ObjectInputStream inputStream){
 
         if (message.contains(Operations.REGISTER)){
 
@@ -185,35 +189,6 @@ public abstract class AbstractNode implements Runnable {
         }
     }
 
-    boolean askBusy(NodeConnection c) throws IOException {
-
-
-        log(id, "Asking busy status of node: " + c.toString());
-
-        String intent = Operations.MESSAGE;
-        String message = Operations.CHECK_BUSY;
-
-        Socket s = connectNode(c);
-        ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-
-        out.writeObject(intent);
-        out.flush();
-
-        out.writeObject(message);
-        out.flush();
-
-
-        ObjectInputStream in = new ObjectInputStream(s.getInputStream());
-        boolean result = in.readBoolean();
-
-        in.close();
-        out.close();
-        s.close();
-
-        return result;
-
-    }
-
     synchronized void passAlgorithm(Algorithm algorithm){
 
 
@@ -221,31 +196,32 @@ public abstract class AbstractNode implements Runnable {
 
         boolean sent = false;
 
-        Iterator<NodeConnection> itr = connections.iterator();
+        List<NodeConnection> shuffled = new LinkedList<>(connections);
+        Collections.shuffle(shuffled);
+
+        Iterator<NodeConnection> itr = shuffled.iterator();
         while(itr.hasNext()) {
 
             NodeConnection c = itr.next();
 
             try {
 
-                boolean isBusy = askBusy(c);
+                log(id, "Sending algorithm to node: " + c.toString());
 
-                if (isBusy){
-                    log(id, "Node " + c.toString() + " is busy");
-                    continue;
-                }
+                String intent = Operations.OBJECT;
+                String message = Operations.EXECUTE_GENERATION;
 
-                log(id, "Node " + c.toString() + " is free");
-                sendAlgorithm(c, algorithm);
+                Socket s = connectNode(c);
+                send(s, intent, message, algorithm);
                 sent = true;
                 break;
 
             }catch (IOException e){
+
                 connections.remove(c);
                 e.printStackTrace();
             }
         }
-
 
         if (!sent && !isMaster()){ // not sent and node
 
@@ -295,15 +271,15 @@ public abstract class AbstractNode implements Runnable {
     @Override
     public void run() {
 
-        while(execute){
+        final AbstractNode self = this;
+
+        while(execute) {
 
             try {
 
-                byte[] buffer = new byte[BUFFER_SIZE];
-                DatagramPacket dp = new DatagramPacket(buffer, 1024);
-
 
                 log(id, "Awaiting connections...");
+                connectionLock.lock();
                 Socket client = this.inputSocket.accept();
 
                 log(id, "socket conected from: " + client.getInetAddress().getHostAddress() + ":" + client.getPort());
@@ -311,19 +287,18 @@ public abstract class AbstractNode implements Runnable {
                 ObjectInputStream inputStream = new ObjectInputStream(client.getInputStream());
                 String intent = (String) inputStream.readObject();
 
-                this.processIntent(intent, inputStream, client);
+                self.processIntent(intent, inputStream, client);
 
                 inputStream.close();
                 client.close();
 
             } catch (IOException e) {
-
                 e.printStackTrace();
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
+            } finally {
+                connectionLock.unlock();
             }
         }
-
-
     }
 }

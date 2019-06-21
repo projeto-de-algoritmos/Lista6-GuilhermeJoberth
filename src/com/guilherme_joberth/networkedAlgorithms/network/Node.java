@@ -1,8 +1,10 @@
 package com.guilherme_joberth.networkedAlgorithms.network;
 
 import com.guilherme_joberth.networkedAlgorithms.algorithm.Algorithm;
+import sun.awt.Mutex;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.*;
 import java.util.*;
@@ -17,18 +19,22 @@ public class Node extends AbstractNode  {
     private Thread t_runner;
     private boolean busy = false;
 
+    Mutex mutex = new Mutex();
+
 
     public Node(String masterNodeAddress, int masterNodePort, int id){
 
         this.connections = new TreeSet<NodeConnection>();
 
-        this.id = "NODE#" + id;
+
 
         try {
 
             this.inputSocket = new ServerSocket(0);
 
             this.localPort = inputSocket.getLocalPort();
+
+            this.id = "NODE#" + id + ":" + localPort;
             log(this.id, "Creating Node Socket on " + inputSocket.getInetAddress().getHostAddress() + ":" + this.localPort);
 
 
@@ -102,32 +108,6 @@ public class Node extends AbstractNode  {
         send(s, intent, message, null);
     }
 
-    @Override
-    void processMessage(String message, Socket client) {
-
-        if (message.contains(Operations.CHECK_BUSY)){
-            answerBusy(client);
-        }
-
-        super.processMessage(message, client);
-    }
-
-    private void answerBusy(Socket client){
-
-        log(id, "Trying to answer busy check");
-
-        try {
-
-            ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
-            out.writeBoolean(this.busy);
-            out.close();
-
-        }catch (IOException e){
-
-            e.printStackTrace();
-        }
-    }
-
     void sendAlgorithmToMaster(Algorithm alg){
 
         log(id, "Sending algorithm " + alg.getId() + " directly to master");
@@ -145,18 +125,31 @@ public class Node extends AbstractNode  {
 
     }
 
-    void processObject(String operation, Object o, Socket client) {
+    void executeAlgorithm(Algorithm algorithm){
 
-        if (operation.contains(Operations.EXECUTE_GENERATION) && !this.busy){
+        log(id, "Starting processing of algorithm " + algorithm.getId() + " in another thread");
 
-            this.busy = true;
+        this.t_runner = new Thread(new AlgorithmRunner(algorithm, this));
+        t_runner.start();
+    }
 
-            Algorithm algorithm = (Algorithm) o;
-            log(id, "Starting processing of algorithm " + algorithm.getId() + " in another thread");
+    void processObject(String operation, Object o, Socket client, ObjectInputStream inputStream) {
+
+        mutex.lock();
+            boolean b = this.busy;
+        mutex.unlock();
+
+        if (operation.contains(Operations.EXECUTE_GENERATION)){
+
+            if(busy){
+
+                passAlgorithm((Algorithm) o);
+            }else{
+
+                executeAlgorithm((Algorithm) o);
+            }
 
 
-            this.t_runner = new Thread(new AlgorithmRunner(algorithm, this));
-            t_runner.start();
         }else if (operation.contains(Operations.CONNECTION_SHARE)){
 
             Set<NodeConnection> received = (Set<NodeConnection>) o;
@@ -194,22 +187,22 @@ public class Node extends AbstractNode  {
 
     }
 
-
-
     synchronized void runnerCallback(AlgorithmRunner runner){
 
-            Algorithm algorithm = runner.getAlgorithm();
+        Algorithm algorithm = runner.getAlgorithm();
 
-            log(id, "Generation #" + algorithm.getStatus() + " processed");
+        log(id, "Generation #" + algorithm.getStatus() + " processed");
 
 
+        if(algorithm.getReady()){
+            sendAlgorithmToMaster(algorithm);
+        }else{
+            passAlgorithm(algorithm);
+        }
+
+        mutex.lock();
             this.busy = false;
-
-            if(algorithm.getReady()){
-                sendAlgorithmToMaster(algorithm);
-            }else{
-                passAlgorithm(algorithm);
-            }
+        mutex.unlock();
     }
 
 }

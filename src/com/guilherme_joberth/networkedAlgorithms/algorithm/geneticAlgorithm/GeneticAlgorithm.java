@@ -35,6 +35,9 @@ public class GeneticAlgorithm implements Serializable, Algorithm {
 
             for (Game g : population.values()) {
 
+
+
+
                 description += g.toString() + "\n";
 
             }

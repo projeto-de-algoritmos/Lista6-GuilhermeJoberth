@@ -4,6 +4,7 @@ import com.guilherme_joberth.networkedAlgorithms.algorithm.Algorithm;
 
 import javax.swing.*;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.*;
 import java.util.*;
 
@@ -21,12 +22,12 @@ public class MasterNode extends AbstractNode {
         this.connections = new TreeSet<>();
         this.finderRunners = new LinkedList<>();
 
-        this.id = "MASTER#" + id;
-
-
         try {
 
             this.inputSocket = new ServerSocket(port);
+
+
+            this.id = "NODE#" + id + ":" + port;
             log(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + port);
 
         } catch (SocketException e) {
@@ -42,7 +43,7 @@ public class MasterNode extends AbstractNode {
     }
 
     @Override
-    void processObject(String operation, Object obj, Socket client) {
+    void processObject(String operation, Object obj, Socket client, ObjectInputStream inputStream) {
 
         if(operation.contains(Operations.EXECUTE_GENERATION)){
 
@@ -79,8 +80,6 @@ public class MasterNode extends AbstractNode {
         }
 
     }
-
-
 
     public synchronized void startAlgorithm(Algorithm alg){
 
