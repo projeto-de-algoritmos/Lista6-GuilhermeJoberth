@@ -95,7 +95,16 @@ public class Main {
 
     public static int getInt(){
 
-        return Integer.parseInt(getString());
+        try{
+
+            return Integer.parseInt(getString());
+
+        }catch (NumberFormatException e){
+
+            e.printStackTrace();
+
+            return getInt();
+        }
     }
 
     static String getString(){
@@ -113,10 +122,14 @@ public class Main {
 
     private void createMasterNode(int id){
 
-        System.out.println("Port Number: ");
-        int port = getInt();
+        System.out.println("Input Port: ");
+        int inPort = getInt();
 
-        MasterNode master = new MasterNode(port, id);
+
+        System.out.println("Output Port: ");
+        int outPort = getInt();
+
+        MasterNode master = new MasterNode(inPort, outPort, id);
         created.add(master);
         masterNode = master;
 
@@ -127,13 +140,20 @@ public class Main {
 
     private void createNode(int id){
 
-        System.out.println("IP: ");
+        System.out.println("Master IP: ");
         String address = getString();
 
-        System.out.println("Port Number: ");
-        int port = getInt();
+        System.out.println("Master Port Number: ");
+        int masterPort = getInt();
 
-        Node n = new Node(address, port, id);
+        System.out.println("Local port: ");
+        int localPort = getInt();
+
+
+        System.out.println("Output port: ");
+        int outPort = getInt();
+
+        Node n = new Node(address, masterPort, localPort, outPort, id);
         created.add(n);
 
         Thread t = new Thread(n);

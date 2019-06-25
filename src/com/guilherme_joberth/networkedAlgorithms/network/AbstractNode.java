@@ -20,10 +20,12 @@ public abstract class AbstractNode implements Runnable {
 
     Set<NodeConnection> connections;
 
-    protected boolean execute = true;
-    public final int BUFFER_SIZE = 1024;
+    private boolean execute = true;
+
 
     ServerSocket inputSocket;
+
+    int outputPort;
 
     String id;
 
@@ -47,7 +49,7 @@ public abstract class AbstractNode implements Runnable {
         if(intent.contains(Operations.OBJECT)){
 
             String operation = (String) inputStream.readObject();
-            Object obj = (Object) inputStream.readObject();
+            Object obj = inputStream.readObject();
 
             log(id, "Object with operation: " + operation);
 
@@ -72,15 +74,41 @@ public abstract class AbstractNode implements Runnable {
 
     abstract boolean isMaster();
 
-
-    protected Socket connectNode(NodeConnection c) throws IOException {
+    protected Socket connectNode(NodeConnection c) {
 
         log(id, "Connecting to Node: " + c.toString());
-        return new Socket(c.getIp(), c.getPort());
+
+        Socket s = null;
+
+        int tries = 0;
+        while(s == null && tries < 3){
+            try {
+
+                s = new Socket();
+                s.setReuseAddress(true);
+
+                s.bind(new InetSocketAddress(this.inputSocket.getInetAddress(), this.outputPort));
+                s.connect(c.getSocketAddress());
+
+            } catch (BindException e) {
+                tries++;
+                log(id, "Coludn't connect to " + c.toString() + "," +
+                        " bind failed, port " + this.outputPort +
+                        "in use, trying again ("+ tries +")");
+
+                if(tries == 3){
+                    e.printStackTrace();
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return s;
     }
 
     public synchronized void sendAlgorithm(NodeConnection c, Algorithm alg) throws IOException {
-
 
         log(id, "Sending algorithm to node: " + c.toString());
 
@@ -110,8 +138,18 @@ public abstract class AbstractNode implements Runnable {
         s.close();
     }
 
+    synchronized void shareConnections(NodeConnection connection){
 
-    synchronized void registerNode(String address){
+        try {
+            send(connectNode(connection), Operations.OBJECT, Operations.CONNECTION_SHARE, this.connections);
+
+        } catch (IOException e){
+
+            e.printStackTrace();
+        }
+    }
+
+    synchronized void registerNode(String address) {
 
         address = address.replaceAll(Operations.REGISTER, "");
         String[] parts = address.split(":");
@@ -124,40 +162,19 @@ public abstract class AbstractNode implements Runnable {
         try {
 
             connection = new NodeConnection(ip, port);
+            this.connections.add(connection);
 
             log(id, "Node added: " + connection.toString());
 
-            // before adding self, lets send back our connections
-            Socket s = connectNode(connection);
+            printCurrentNodes();
 
-            log(id, "Sharing connections");
-
-            ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-
-            String intent = Operations.OBJECT;
-            String message = Operations.CONNECTION_SHARE;
-
-            out.writeObject(intent);
-            out.flush();
-
-            out.writeObject(message);
-            out.flush();
-
-            out.writeObject(connections);
+            shareConnections(connection);
 
         } catch (UnknownHostException e) {
 
-
             log(id, "Unknow host");
             e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-
-
-        this.connections.add(connection);
-        printCurrentNodes();
-
     }
 
     synchronized void removeNode(String address){
@@ -211,8 +228,7 @@ public abstract class AbstractNode implements Runnable {
                 String intent = Operations.OBJECT;
                 String message = Operations.EXECUTE_GENERATION;
 
-                Socket s = connectNode(c);
-                send(s, intent, message, algorithm);
+                send(connectNode(c), intent, message, algorithm);
                 sent = true;
                 break;
 
@@ -232,7 +248,8 @@ public abstract class AbstractNode implements Runnable {
         }else if (!sent){ // not sent and master
 
             log(id, "All nodes busy, waiting 5 seconds to send again");
-            try {Thread.currentThread().sleep(5000); } catch (InterruptedException e) { e.printStackTrace(); }
+            try {
+                Thread.sleep(5000); } catch (InterruptedException e) { e.printStackTrace(); }
             passAlgorithm(algorithm);
         }
     }
@@ -289,7 +306,7 @@ public abstract class AbstractNode implements Runnable {
 
                 self.processIntent(intent, inputStream, client);
 
-                inputStream.close();
+                log(id, "Closing socket: " + client.toString());
                 client.close();
 
             } catch (IOException e) {

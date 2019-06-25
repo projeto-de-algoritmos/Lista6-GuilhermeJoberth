@@ -22,15 +22,14 @@ public class Node extends AbstractNode  {
     Mutex mutex = new Mutex();
 
 
-    public Node(String masterNodeAddress, int masterNodePort, int id){
+    public Node(String masterNodeAddress, int masterNodePort, int localPort, int outPort, int id){
 
         this.connections = new TreeSet<NodeConnection>();
-
-
+        this.outputPort = outPort;
 
         try {
 
-            this.inputSocket = new ServerSocket(0);
+            this.inputSocket = new ServerSocket(localPort);
 
             this.localPort = inputSocket.getLocalPort();
 
@@ -55,7 +54,10 @@ public class Node extends AbstractNode  {
 
     private Socket connectMaster() throws IOException {
         log(id, "Connecting to master node");
-        return new Socket(this.masterNodeIP, this.masterNodePort);
+
+        NodeConnection masterNode = new NodeConnection(this.masterNodeIP.getHostAddress(), this.masterNodePort);
+
+        return connectNode(masterNode);
     }
 
     @Override
@@ -104,8 +106,7 @@ public class Node extends AbstractNode  {
         String intent = Operations.MESSAGE;
         String message = Operations.REGISTER + this.inputSocket.getInetAddress().getHostAddress() + ':' + localPort;
 
-        Socket s = connectNode(c);
-        send(s, intent, message, null);
+        send(connectNode(c), intent, message, null);
     }
 
     void sendAlgorithmToMaster(Algorithm alg){

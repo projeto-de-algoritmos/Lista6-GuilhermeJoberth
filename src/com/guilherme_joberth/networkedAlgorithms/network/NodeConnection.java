@@ -2,6 +2,8 @@ package com.guilherme_joberth.networkedAlgorithms.network;
 
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 
 public class NodeConnection implements Serializable, Comparable {
@@ -32,5 +34,10 @@ public class NodeConnection implements Serializable, Comparable {
     @Override
     public int compareTo(Object o) {
         return this.toString().compareTo(o.toString());
+    }
+
+    public SocketAddress getSocketAddress(){
+
+        return new InetSocketAddress(this.getIp(), this.getPort());
     }
 }

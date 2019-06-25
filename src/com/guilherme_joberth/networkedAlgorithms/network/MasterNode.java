@@ -10,25 +10,22 @@ import java.util.*;
 
 public class MasterNode extends AbstractNode {
 
-    String ip;
-
-    private boolean execute = true;
-    private final int BUFFER_SIZE = 1024;
-
     private List<NodeFinderRunner> finderRunners;
 
-    public MasterNode(int port, int id){
+    public MasterNode(int localPort, int outPort, int id){
 
         this.connections = new TreeSet<>();
         this.finderRunners = new LinkedList<>();
 
+        this.outputPort = outPort;
+
         try {
 
-            this.inputSocket = new ServerSocket(port);
+            this.inputSocket = new ServerSocket(localPort);
+            this.inputSocket.setReuseAddress(true);
 
-
-            this.id = "NODE#" + id + ":" + port;
-            log(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + port);
+            this.id = "NODE#" + id + ":" + localPort;
+            log(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + localPort);
 
         } catch (SocketException e) {
             e.printStackTrace();
