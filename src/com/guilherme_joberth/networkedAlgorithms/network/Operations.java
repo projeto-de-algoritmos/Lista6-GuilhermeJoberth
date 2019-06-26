@@ -6,6 +6,7 @@ public class Operations {
     public static final String MESSAGE = "m>>";
     public static final String REGISTER = "r>>";
     public static final String REMOVE = "d>>";
+    public static final String GET_PUBLIC_ADDRESS = "a>>";
 
     // objects
     public static final String OBJECT = "o>>";

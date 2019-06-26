@@ -5,6 +5,7 @@ import com.guilherme_joberth.networkedAlgorithms.algorithm.Algorithm;
 import javax.swing.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.*;
 import java.util.*;
 
@@ -37,6 +38,38 @@ public class MasterNode extends AbstractNode {
     @Override
     boolean isMaster() {
         return true;
+    }
+
+    @Override
+    void processMessage(String message, Socket client, ObjectInputStream inputStream){
+    
+        if(message.contains(Operations.GET_PUBLIC_ADDRESS)){
+
+            log(id, "On socket " + client.toString() + " received request of public address");
+
+            String[] parts = message.split(":");
+            int port = Integer.parseInt(parts[1]);
+            String address = client.getInetAddress().getHostAddress();
+
+            try{
+            
+                NodeConnection connection = new NodeConnection(address, port);
+
+                log(id, "Sending " + connection.toString() + " as answear");
+                
+                answear(new ObjectOutputStream(client.getOutputStream()), connection.getIp());
+
+            }catch(UnknownHostException e){
+                e.printStackTrace();
+            }catch(IOException e){
+                e.printStackTrace();
+            }
+
+        }else{
+
+            super.processMessage(message, client, inputStream);
+
+        }
     }
 
     @Override

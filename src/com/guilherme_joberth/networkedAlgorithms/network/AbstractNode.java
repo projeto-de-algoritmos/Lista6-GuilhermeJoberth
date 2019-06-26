@@ -64,7 +64,7 @@ public abstract class AbstractNode implements Runnable {
 
         if (message.contains(Operations.REGISTER)){
 
-            this.registerNode(message);
+            this.registerNode(client, message);
 
         }else if (message.contains(Operations.REMOVE)){
 
@@ -138,6 +138,12 @@ public abstract class AbstractNode implements Runnable {
         s.close();
     }
 
+    synchronized void answear(ObjectOutputStream out, String message) throws IOException{
+
+        out.writeObject(message);
+        out.flush();
+    }
+
     synchronized void shareConnections(NodeConnection connection){
 
         try {
@@ -149,12 +155,14 @@ public abstract class AbstractNode implements Runnable {
         }
     }
 
-    synchronized void registerNode(String address) {
+    synchronized void registerNode(Socket client, String address) {
 
         address = address.replaceAll(Operations.REGISTER, "");
         String[] parts = address.split(":");
 
-        String ip = parts[0];
+        log(id, "Registering new connection to: " + client.toString());
+
+        String ip = client.getInetAddress().getHostAddress().toString();
         int port = Integer.parseInt(parts[1]);
 
         NodeConnection connection = null;

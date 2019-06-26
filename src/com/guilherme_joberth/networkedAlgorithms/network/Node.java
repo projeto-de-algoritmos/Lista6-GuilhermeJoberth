@@ -15,6 +15,7 @@ public class Node extends AbstractNode  {
     private int masterNodePort;
 
     private int localPort;
+    private String localIP = null;
 
     private Thread t_runner;
     private boolean busy = false;
@@ -32,7 +33,7 @@ public class Node extends AbstractNode  {
             this.inputSocket = new ServerSocket(localPort);
 
             this.localPort = inputSocket.getLocalPort();
-
+            
             this.id = "NODE#" + id + ":" + localPort;
             log(this.id, "Creating Node Socket on " + inputSocket.getInetAddress().getHostAddress() + ":" + this.localPort);
 
@@ -40,6 +41,7 @@ public class Node extends AbstractNode  {
             this.masterNodeIP = InetAddress.getByName(masterNodeAddress);
             this.masterNodePort = masterNodePort;
 
+            this.askForPublicAddress();
             this.registerOnMasterNode();
 
         } catch (SocketException e) {
@@ -49,7 +51,26 @@ public class Node extends AbstractNode  {
         } catch (IOException e) {
 
             e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+
+            e.printStackTrace();
         }
+    }
+
+    private void askForPublicAddress() throws IOException, ClassNotFoundException {
+
+        log(this.id, "Asking for public ip...");
+
+        Socket master = this.connectMaster();
+        ObjectOutputStream out = new ObjectOutputStream(master.getOutputStream());
+        answear(out, Operations.MESSAGE);
+        answear(out, Operations.GET_PUBLIC_ADDRESS + ":" + this.localPort);
+
+        ObjectInputStream in = new ObjectInputStream(master.getInputStream());
+
+        this.localIP = (String) in.readObject();
+
+        master.close();
     }
 
     private Socket connectMaster() throws IOException {
@@ -89,11 +110,10 @@ public class Node extends AbstractNode  {
 
     private void registerOnMasterNode() throws IOException {
 
-
         log(id, "Registering on master node");
 
         String intent = Operations.MESSAGE;
-        String message = Operations.REGISTER + this.inputSocket.getInetAddress().getHostAddress() + ':' + localPort;
+        String message = Operations.REGISTER + "0.0.0.0" + ':' + localPort;
 
         Socket s = connectMaster();
         send(s, intent, message, null);
@@ -104,7 +124,7 @@ public class Node extends AbstractNode  {
         log(id, "Registering on node" + c.toString());
 
         String intent = Operations.MESSAGE;
-        String message = Operations.REGISTER + this.inputSocket.getInetAddress().getHostAddress() + ':' + localPort;
+        String message = Operations.REGISTER + this.localIP + ':' + localPort;
 
         send(connectNode(c), intent, message, null);
     }
@@ -150,7 +170,6 @@ public class Node extends AbstractNode  {
                 executeAlgorithm((Algorithm) o);
             }
 
-
         }else if (operation.contains(Operations.CONNECTION_SHARE)){
 
             Set<NodeConnection> received = (Set<NodeConnection>) o;
@@ -158,7 +177,8 @@ public class Node extends AbstractNode  {
             log(id, "Received " + received.size() + " shared connections");
 
             try {
-                NodeConnection selfConnection = new NodeConnection(this.inputSocket.getInetAddress().getHostAddress(), localPort);
+
+                NodeConnection selfConnection = new NodeConnection(this.localIP, localPort);
 
                 int added = 0;
 
@@ -187,6 +207,27 @@ public class Node extends AbstractNode  {
         }
 
     }
+
+
+    @Override
+    void processMessage(String message, Socket client, ObjectInputStream inputStream){
+    
+        if(message.contains(Operations.GET_PUBLIC_ADDRESS)){
+
+            log(id, "Received public address in message: " + message);
+
+            String[] parts = message.split(":");
+            String address = parts[1];
+
+            this.localIP = address;
+
+        }else{
+
+            super.processMessage(message, client, inputStream);
+
+        }
+    }
+
 
     synchronized void runnerCallback(AlgorithmRunner runner){
 
