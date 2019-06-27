@@ -25,7 +25,7 @@ public class MasterNode extends AbstractNode {
             this.inputSocket = new ServerSocket(localPort);
             this.inputSocket.setReuseAddress(true);
 
-            this.id = "NODE#" + id + ":" + localPort;
+            this.id = "NODE#" + id + ":" + inputSocket.getLocalPort();;
             log(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + localPort);
 
         } catch (SocketException e) {

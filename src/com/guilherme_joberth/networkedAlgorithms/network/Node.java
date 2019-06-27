@@ -70,6 +70,8 @@ public class Node extends AbstractNode  {
 
         this.localIP = (String) in.readObject();
 
+        log(id, "This IP is: " + this.localIP);
+
         master.close();
     }
 

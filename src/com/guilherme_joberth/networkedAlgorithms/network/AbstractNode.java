@@ -241,8 +241,6 @@ public abstract class AbstractNode implements Runnable {
                 break;
 
             }catch (IOException e){
-
-                connections.remove(c);
                 e.printStackTrace();
             }
         }
