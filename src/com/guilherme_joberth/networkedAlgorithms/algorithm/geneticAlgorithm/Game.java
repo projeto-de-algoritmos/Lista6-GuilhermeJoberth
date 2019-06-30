@@ -14,8 +14,6 @@ public class Game implements Serializable {
 
     Game(List numbers){
 
-        this.numbers = new LinkedList<Integer>();
-
         if (numbers == null){
             numbers = Game.randomNumbers();
         }
@@ -29,7 +27,11 @@ public class Game implements Serializable {
         return numbers;
     }
 
-    private static List randomNumbers(){
+    public void setNumbers(List<Integer> numbers){
+        this.numbers = numbers;
+    }
+
+    static List randomNumbers(){
 
         List<Integer> random_generation = new LinkedList<>();
         for (int i = 1; i <= 6; i++)

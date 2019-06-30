@@ -66,7 +66,7 @@ public class Main {
                         List<Restriction> restrictions = new LinkedList<>();
                         restrictions.add(new RepeatedRestriction());
 
-                        Algorithm alg = new GeneticAlgorithm(restrictions, ids);
+                        Algorithm alg = new GeneticAlgorithm(restrictions, ids, 150);
                         System.out.println("[MAIN] Creating algorithm #" + ids);
                         ids++;
 
