@@ -2,9 +2,11 @@ package com.guilherme_joberth.networkedAlgorithms.algorithm.geneticAlgorithm;
 
 import com.guilherme_joberth.networkedAlgorithms.algorithm.geneticAlgorithm.restrictions.Restriction;
 
+import javax.swing.text.TabableView;
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 public class Game implements Serializable {
@@ -27,15 +29,13 @@ public class Game implements Serializable {
         return numbers;
     }
 
-    public void setNumbers(List<Integer> numbers){
-        this.numbers = numbers;
-    }
-
     static List randomNumbers(){
 
         List<Integer> random_generation = new LinkedList<>();
+        Random rng = new Random();
+
         for (int i = 1; i <= 6; i++)
-            random_generation.add(i);
+            random_generation.add(rng.nextInt(60) + 1);
 
         return random_generation;
     }
@@ -60,6 +60,7 @@ public class Game implements Serializable {
     public String toString() {
         String str = "[";
 
+        this.numbers.sort(Integer::compareTo);
         for (Integer n : this.numbers){
             str += " " + n.toString() + " ";
         }

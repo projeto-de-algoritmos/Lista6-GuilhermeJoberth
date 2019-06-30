@@ -2,8 +2,10 @@ package com.guilherme_joberth.networkedAlgorithms;
 
 import com.guilherme_joberth.networkedAlgorithms.algorithm.Algorithm;
 import com.guilherme_joberth.networkedAlgorithms.algorithm.geneticAlgorithm.GeneticAlgorithm;
+import com.guilherme_joberth.networkedAlgorithms.algorithm.geneticAlgorithm.restrictions.HighSequenceRestriction;
 import com.guilherme_joberth.networkedAlgorithms.algorithm.geneticAlgorithm.restrictions.RepeatedRestriction;
 import com.guilherme_joberth.networkedAlgorithms.algorithm.geneticAlgorithm.restrictions.Restriction;
+import com.guilherme_joberth.networkedAlgorithms.algorithm.geneticAlgorithm.restrictions.SequenceOfThreeRestriction;
 import com.guilherme_joberth.networkedAlgorithms.network.AbstractNode;
 import com.guilherme_joberth.networkedAlgorithms.network.MasterNode;
 import com.guilherme_joberth.networkedAlgorithms.network.Node;
@@ -64,7 +66,10 @@ public class Main {
                     else if (option == 1){
 
                         List<Restriction> restrictions = new LinkedList<>();
+
                         restrictions.add(new RepeatedRestriction());
+                        restrictions.add(new HighSequenceRestriction());
+                        restrictions.add(new SequenceOfThreeRestriction());
 
                         Algorithm alg = new GeneticAlgorithm(restrictions, ids, 150);
                         System.out.println("[MAIN] Creating algorithm #" + ids);

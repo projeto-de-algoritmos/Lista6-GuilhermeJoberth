@@ -70,7 +70,6 @@ public class GeneticAlgorithm implements Serializable, Algorithm {
 
     }
 
-
     public void execute(){
 
         double globalAverage = 0;
@@ -92,15 +91,6 @@ public class GeneticAlgorithm implements Serializable, Algorithm {
         this.population = this.crossover(selected);
 
         this.generationsRun++;
-
-//        try {
-//            int sleep = ThreadLocalRandom.current().nextInt(0,250);
-//            System.out.println("[ALGORITHM" + this.getId() + "] Sleeping for " + sleep + "ms");
-//            Thread.currentThread().sleep(sleep);
-//
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
     }
 
     public boolean getReady(){
