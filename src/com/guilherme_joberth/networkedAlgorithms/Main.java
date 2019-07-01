@@ -183,12 +183,12 @@ public class Main {
 
         
 
-        /*if (created != null){
+        if (created != null){
 
             for ( AbstractNode n : created) {
                 n.end();
             }
-        }*/
+        }
 
     }
 
@@ -282,6 +282,7 @@ public class Main {
 		back_master.setVisible(false);
 		
 		JTextArea textArea = new JTextArea(5, 20);
+		textArea.setEditable(false);
 		JScrollPane scrollPane = new JScrollPane(textArea);
 		scrollPane.setLocation(150, 450);
 		scrollPane.setSize(700, 200);
@@ -294,20 +295,15 @@ public class Main {
 		
 		frame.getContentPane().add(panelMaster);
 
-        /*System.out.println("Input Port: ");
-        int inPort = getInt();
-
-
-        System.out.println("Output Port: ");
-        int outPort = getInt();*/
-
 		send.addActionListener(new ActionListener() {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				send.setVisible(false);
 				algoritmGenetic.setVisible(true);
+				inputPort.setEditable(false);
 				back_master.setVisible(true);
+				outputPort.setEditable(false);
 				
 				MasterNode master = new MasterNode(Integer.parseInt(inputPort.getText()), Integer.parseInt(inputPort.getText()), id, textArea);
 		        created.add(master);
@@ -329,6 +325,7 @@ public class Main {
                 restrictions.add(new SequenceOfThreeRestriction());
 
                 Algorithm alg = new GeneticAlgorithm(restrictions, ids, 150);
+                textArea.append("[MAIN] Creating algorithm #" + ids + "\n");
                 System.out.println("[MAIN] Creating algorithm #" + ids);
                 ids++;
 
@@ -343,7 +340,21 @@ public class Main {
 			public void actionPerformed(ActionEvent e) {
 				back_master.setVisible(false);
 				algoritmGenetic.setVisible(false);
+				inputPort.setEditable(true);
+				outputPort.setEditable(true);
 				send.setVisible(true);
+				return;
+			}
+		});
+		
+		backButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				
+				panelMaster.setVisible(false);
+				panelMain.setVisible(true);
+				panelbutton.setVisible(true);
 			}
 		});
 
@@ -431,20 +442,6 @@ public class Main {
 		panelMaster.add(backButton);
 		
 		frame.getContentPane().add(panelMaster);
-
-        /*System.out.println("Master IP: ");
-        String address = getString();
-
-        System.out.println("Master Port Number: ");
-        int masterPort = getInt();
-
-        System.out.println("Local port: ");
-        int localPort = getInt();
-
-
-        System.out.println("Output port: ");
-        int outPort = getInt();*/
-
 		
 		final Integer aux_id = id;
 		
@@ -452,6 +449,10 @@ public class Main {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				fieldIp.setEditable(false);
+				portMaster.setEditable(false);
+				localPort.setEditable(false);
+				outputPort.setEditable(false);
 				Node n = new Node(fieldIp.getText(), Integer.parseInt(portMaster.getText()), Integer.parseInt(localPort.getText()), Integer.parseInt(outputPort.getText()), aux_id, textArea);
 		        created.add(n);
 		        
@@ -459,7 +460,19 @@ public class Main {
 		        t.start();
 			}
 		});
-        
+		
+		backButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				
+				panelMaster.setVisible(false);
+				panelMain.setVisible(true);
+				panelbutton.setVisible(true);
+			}
+		});
+		
+		
     }
     
     private static BufferedImage resize(BufferedImage img, int height, int width) {
