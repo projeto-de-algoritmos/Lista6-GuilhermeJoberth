@@ -15,12 +15,15 @@ import java.io.ObjectOutputStream;
 import java.net.*;
 import java.util.*;
 
+import javax.swing.JTextArea;
+
 public abstract class AbstractNode implements Runnable {
 
 
     Set<NodeConnection> connections;
 
     private boolean execute = true;
+    protected JTextArea textArea;
 
 
     ServerSocket inputSocket;
@@ -34,12 +37,14 @@ public abstract class AbstractNode implements Runnable {
     synchronized void processIntent(String intent, ObjectInputStream inputStream, Socket client) throws IOException, ClassNotFoundException {
 
 
+    	logTextArea(id, "Processing intent: " + intent, this.textArea);
         log(id, "Processing intent: " + intent);
 
         if(intent.contains(Operations.MESSAGE)){
 
             String message = (String) inputStream.readObject();
 
+            logTextArea(id, "Message: " + message, this.textArea);
             log(id, "Message: " + message);
 
             this.processMessage(message, client, inputStream);
@@ -51,6 +56,7 @@ public abstract class AbstractNode implements Runnable {
             String operation = (String) inputStream.readObject();
             Object obj = inputStream.readObject();
 
+            logTextArea(id, "Object with operation: " + operation, this.textArea);
             log(id, "Object with operation: " + operation);
 
             this.processObject(operation, obj, client, inputStream);
@@ -76,6 +82,7 @@ public abstract class AbstractNode implements Runnable {
 
     protected Socket connectNode(NodeConnection c) {
 
+    	logTextArea(id, "Connecting to Node: " + c.toString(), this.textArea);
         log(id, "Connecting to Node: " + c.toString());
 
         Socket s = null;
@@ -92,6 +99,10 @@ public abstract class AbstractNode implements Runnable {
 
             } catch (BindException e) {
                 tries++;
+                logTextArea(id, "Coludn't connect to " + c.toString() + "," +
+                        " bind failed, port " + this.outputPort +
+                        "in use, trying again ("+ tries +")", 
+                        this.textArea);
                 log(id, "Coludn't connect to " + c.toString() + "," +
                         " bind failed, port " + this.outputPort +
                         "in use, trying again ("+ tries +")");
@@ -110,6 +121,7 @@ public abstract class AbstractNode implements Runnable {
 
     public synchronized void sendAlgorithm(NodeConnection c, Algorithm alg) throws IOException {
 
+    	logTextArea(id, "Sending algorithm to node: " + c.toString(), this.textArea);
         log(id, "Sending algorithm to node: " + c.toString());
 
         String intent = Operations.OBJECT;
@@ -160,6 +172,7 @@ public abstract class AbstractNode implements Runnable {
         address = address.replaceAll(Operations.REGISTER, "");
         String[] parts = address.split(":");
 
+        logTextArea(id, "Registering new connection to: " + client.toString(), this.textArea);
         log(id, "Registering new connection to: " + client.toString());
 
         String ip = client.getInetAddress().getHostAddress().toString();
@@ -172,6 +185,7 @@ public abstract class AbstractNode implements Runnable {
             connection = new NodeConnection(ip, port);
             this.connections.add(connection);
 
+            logTextArea(id, "Node added: " + connection.toString(), this.textArea);
             log(id, "Node added: " + connection.toString());
 
             printCurrentNodes();
@@ -180,6 +194,7 @@ public abstract class AbstractNode implements Runnable {
 
         } catch (UnknownHostException e) {
 
+        	logTextArea(id, "Unknow host", this.textArea);
             log(id, "Unknow host");
             e.printStackTrace();
         }
@@ -203,6 +218,7 @@ public abstract class AbstractNode implements Runnable {
                 if(c.getPort() == comparator.getPort() && c.getIp().equals(comparator.getIp())){
                     connections.remove(c);
 
+                    logTextArea(id, "Node removed: " + c.toString(), this.textArea);
                     log(id, "Node removed: " + c.toString());
                 }
 
@@ -216,7 +232,7 @@ public abstract class AbstractNode implements Runnable {
 
     synchronized void passAlgorithm(Algorithm algorithm){
 
-
+    	logTextArea(id, "Trying to send algorithm", this.textArea);
         log(id, "Trying to send algorithm");
 
         boolean sent = false;
@@ -230,7 +246,8 @@ public abstract class AbstractNode implements Runnable {
             NodeConnection c = itr.next();
 
             try {
-
+            	
+            	logTextArea(id, "Sending algorithm to node: " + c.toString(), this.textArea);
                 log(id, "Sending algorithm to node: " + c.toString());
 
                 String intent = Operations.OBJECT;
@@ -247,12 +264,14 @@ public abstract class AbstractNode implements Runnable {
 
         if (!sent && !isMaster()){ // not sent and node
 
+        	logTextArea(id, "Couldn't send algorithm to any connection, returning to Master Node", this.textArea);
             log(id, "Couldn't send algorithm to any connection, returning to Master Node");
             Node n = (Node) this;
             n.sendAlgorithmToMaster(algorithm);
 
         }else if (!sent){ // not sent and master
-
+        	
+        	logTextArea(id, "All nodes busy, waiting 5 seconds to send again", this.textArea);
             log(id, "All nodes busy, waiting 5 seconds to send again");
             try {
                 Thread.sleep(5000); } catch (InterruptedException e) { e.printStackTrace(); }
@@ -266,7 +285,7 @@ public abstract class AbstractNode implements Runnable {
         this.execute = false;
 
         try {
-
+        	logTextArea(id, "Closing Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + inputSocket.getLocalPort(), this.textArea);
             log(id, "Closing Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + inputSocket.getLocalPort());
             this.inputSocket.close();
 
@@ -280,6 +299,12 @@ public abstract class AbstractNode implements Runnable {
         System.out.println("[" + id + "]" + message);
 
     }
+    
+    static void logTextArea(String id, String message, JTextArea textArea){
+
+        textArea.append("[" + id + "]" + message + "\n");
+
+    }
 
     synchronized void printCurrentNodes(){
         String str = "";
@@ -287,6 +312,7 @@ public abstract class AbstractNode implements Runnable {
         for (NodeConnection connection : connections) {
             str += "\n" + connection.toString();
         }
+        logTextArea(id, "Current connections (" + connections.size() + "):" + str + "\n", this.textArea);
         log(id, "Current connections (" + connections.size() + "):" + str + "\n");
 
     }
@@ -300,18 +326,20 @@ public abstract class AbstractNode implements Runnable {
 
             try {
 
-
+            	logTextArea(id, "Awaiting connections...", this.textArea);
                 log(id, "Awaiting connections...");
                 connectionLock.lock();
                 Socket client = this.inputSocket.accept();
 
+                logTextArea(id, "socket conected from: " + client.getInetAddress().getHostAddress() + ":" + client.getPort(), this.textArea);
                 log(id, "socket conected from: " + client.getInetAddress().getHostAddress() + ":" + client.getPort());
 
                 ObjectInputStream inputStream = new ObjectInputStream(client.getInputStream());
                 String intent = (String) inputStream.readObject();
 
                 self.processIntent(intent, inputStream, client);
-
+                
+                logTextArea(id, "Closing socket: " + client.toString(), this.textArea);
                 log(id, "Closing socket: " + client.toString());
                 client.close();
 

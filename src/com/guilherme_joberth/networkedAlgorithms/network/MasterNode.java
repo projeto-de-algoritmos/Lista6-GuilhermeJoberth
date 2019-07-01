@@ -13,11 +13,12 @@ public class MasterNode extends AbstractNode {
 
     private List<NodeFinderRunner> finderRunners;
 
-    public MasterNode(int localPort, int outPort, int id){
+    public MasterNode(int localPort, int outPort, int id, JTextArea textArea){
 
         this.connections = new TreeSet<>();
         this.finderRunners = new LinkedList<>();
-
+        this.textArea = textArea;
+        
         this.outputPort = outPort;
 
         try {
@@ -25,7 +26,8 @@ public class MasterNode extends AbstractNode {
             this.inputSocket = new ServerSocket(localPort);
             this.inputSocket.setReuseAddress(true);
 
-            this.id = "NODE#" + id + ":" + inputSocket.getLocalPort();;
+            this.id = "NODE#" + id + ":" + inputSocket.getLocalPort();
+            logTextArea(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + localPort, this.textArea);
             log(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + localPort);
 
         } catch (SocketException e) {
@@ -44,7 +46,7 @@ public class MasterNode extends AbstractNode {
     void processMessage(String message, Socket client, ObjectInputStream inputStream){
     
         if(message.contains(Operations.GET_PUBLIC_ADDRESS)){
-
+        	logTextArea(id, "On socket " + client.toString() + " received request of public address", this.textArea);
             log(id, "On socket " + client.toString() + " received request of public address");
 
             String[] parts = message.split(":");
@@ -55,6 +57,7 @@ public class MasterNode extends AbstractNode {
             
                 NodeConnection connection = new NodeConnection(address, port);
 
+                logTextArea(id, "Sending " + connection.toString() + " as answear", this.textArea);
                 log(id, "Sending " + connection.toString() + " as answear");
                 
                 answear(new ObjectOutputStream(client.getOutputStream()), connection.getIp());
@@ -102,10 +105,12 @@ public class MasterNode extends AbstractNode {
         finderRunners.remove(f);
 
         if (algorithm == null){
-
+        	
+        	logTextArea(id, "Sent algorithm", this.textArea);
             log(id, "Sent algorithm");
         }else{
-
+        	
+        	logTextArea(id, "couldn't sent algorithm anywhere!!! - lost", this.textArea);
             log(id, "couldn't sent algorithm anywhere!!! - lost");
         }
 
@@ -113,6 +118,7 @@ public class MasterNode extends AbstractNode {
 
     public synchronized void startAlgorithm(Algorithm alg){
 
+    	logTextArea(id, "Starting algorithm#" + alg.getId(), this.textArea);
         log(id, "Starting algorithm#" + alg.getId());
         passAlgorithm(alg);
 

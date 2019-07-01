@@ -17,6 +17,7 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.awt.print.Printable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -47,12 +48,15 @@ public class Main {
 
     MasterNode masterNode;
 
+	private Integer ids;
+
     Main(){
 
         this.created = new LinkedList<>();
+        this.ids = 1;
     }
 
-    void run(){
+    void run() {
 
 
     	JFrame frame = new JFrame("Network P2P");
@@ -84,30 +88,6 @@ public class Main {
         panelButton.add(buttonMaster);
         panelButton.add(buttonNode);
         
-        buttonMaster.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					MasterNodeOption(frame, panelButton, panelLabelMain);
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			}
-		});
-        
-        buttonNode.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					NodeOption(frame, panelButton, panelLabelMain);
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			}
-		});
-        
         panelButton.setBounds(100,270,800,400); 
      
         frame.setSize(1000, 700);  
@@ -118,10 +98,9 @@ public class Main {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(null);    
         frame.setVisible(true);
-    	
-        int ids = 1;
+        
 
-        while (true){
+        /*while (true){
             System.out.println("0 - Quit");
             System.out.println("1 - Master Node");
             System.out.println("2 - Node");
@@ -169,14 +148,47 @@ public class Main {
                 ids++;
             }
 
-        }
+        }*/
+        
+        buttonMaster.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				
+				if (masterNode == null) {
+                    try {
+						createMasterNode(ids, frame, panelButton, panelLabelMain);
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+                    Main.this.ids++;
+                }
+				
+			}
+		});
+        
+        
+        buttonNode.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					createNode(Main.this.ids, frame, panelButton, panelLabelMain);
+					Main.this.ids += 1;
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
 
-        if (created != null){
+        
+
+        /*if (created != null){
 
             for ( AbstractNode n : created) {
                 n.end();
             }
-        }
+        }*/
 
     }
 
@@ -207,57 +219,9 @@ public class Main {
         return input;
     }
 
-    private void createMasterNode(int id){
-
-        System.out.println("Input Port: ");
-        int inPort = getInt();
-
-
-        System.out.println("Output Port: ");
-        int outPort = getInt();
-
-        MasterNode master = new MasterNode(inPort, outPort, id);
-        created.add(master);
-        masterNode = master;
-
-        Thread t = new Thread(master);
-        t.start();
-
-    }
-
-    private void createNode(int id){
-
-        System.out.println("Master IP: ");
-        String address = getString();
-
-        System.out.println("Master Port Number: ");
-        int masterPort = getInt();
-
-        System.out.println("Local port: ");
-        int localPort = getInt();
-
-
-        System.out.println("Output port: ");
-        int outPort = getInt();
-
-        Node n = new Node(address, masterPort, localPort, outPort, id);
-        created.add(n);
-
-        Thread t = new Thread(n);
-        t.start();
-    }
-    
-    private static BufferedImage resize(BufferedImage img, int height, int width) {
-        Image tmp = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        BufferedImage resized = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = resized.createGraphics();
-        g2d.drawImage(tmp, 0, 0, null);
-        g2d.dispose();
-        return resized;
-    }
-	
-	static public void MasterNodeOption(JFrame frame, JPanel panelbutton, JPanel panelMain) throws IOException {
-		panelMain.setVisible(false);
+    private void createMasterNode(int id, JFrame frame, JPanel panelbutton, JPanel panelMain) throws IOException{
+    	
+    	panelMain.setVisible(false);
 		panelbutton.setVisible(false);
 		
 		JPanel panelMaster = new JPanel();
@@ -303,10 +267,22 @@ public class Main {
 		send.setLocation(500, 350);
 		send.setSize(200, 30);
 		panelMaster.add(send);
+		send.setVisible(true);
+		
+		JButton algoritmGenetic = new JButton("Algoritimo genetico");
+		algoritmGenetic.setLocation(450, 350);
+		algoritmGenetic.setSize(200, 30);
+		panelMaster.add(algoritmGenetic);
+		algoritmGenetic.setVisible(false);
+		
+		JButton back_master = new JButton("Parar");
+		back_master.setLocation(700, 350);
+		back_master.setSize(150, 30);
+		panelMaster.add(back_master);
+		back_master.setVisible(false);
 		
 		JTextArea textArea = new JTextArea(5, 20);
 		JScrollPane scrollPane = new JScrollPane(textArea);
-		textArea.setEditable(false);
 		scrollPane.setLocation(150, 450);
 		scrollPane.setSize(700, 200);
 		panelMaster.add(scrollPane);
@@ -317,9 +293,64 @@ public class Main {
 		panelMaster.add(backButton);
 		
 		frame.getContentPane().add(panelMaster);
-	}
-	
-	static public void NodeOption(JFrame frame, JPanel panelbutton, JPanel panelMain) throws IOException {
+
+        /*System.out.println("Input Port: ");
+        int inPort = getInt();
+
+
+        System.out.println("Output Port: ");
+        int outPort = getInt();*/
+
+		send.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				send.setVisible(false);
+				algoritmGenetic.setVisible(true);
+				back_master.setVisible(true);
+				
+				MasterNode master = new MasterNode(Integer.parseInt(inputPort.getText()), Integer.parseInt(inputPort.getText()), id, textArea);
+		        created.add(master);
+		        masterNode = master;
+
+		        Thread t = new Thread(master);
+		        t.start();
+			}
+		});
+		
+		algoritmGenetic.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+                List<Restriction> restrictions = new LinkedList<>();
+
+                restrictions.add(new RepeatedRestriction());
+                restrictions.add(new HighSequenceRestriction());
+                restrictions.add(new SequenceOfThreeRestriction());
+
+                Algorithm alg = new GeneticAlgorithm(restrictions, ids, 150);
+                System.out.println("[MAIN] Creating algorithm #" + ids);
+                ids++;
+
+                Thread t = new Thread(() -> masterNode.startAlgorithm(alg));
+                t.start();
+			}
+		});
+		
+		back_master.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				back_master.setVisible(false);
+				algoritmGenetic.setVisible(false);
+				send.setVisible(true);
+			}
+		});
+
+    }
+
+    private void createNode(int id, JFrame frame, JPanel panelbutton, JPanel panelMain) throws IOException{
+    	
 		panelMain.setVisible(false);
 		panelbutton.setVisible(false);
 		
@@ -362,7 +393,7 @@ public class Main {
 		panelMaster.add(portMasterLabel);
 		
 		JLabel localPortLabel = new JLabel();
-		localPortLabel.setText("Porta da Master: ");
+		localPortLabel.setText("Porta de entrada: ");
 		localPortLabel.setLocation(400, 240);
 		localPortLabel.setSize(200, 30);
 		
@@ -373,7 +404,7 @@ public class Main {
 		panelMaster.add(localPortLabel);
 		
 		JLabel outputPortLabel = new JLabel();
-		outputPortLabel.setText("Porta da Master: ");
+		outputPortLabel.setText("Porta da saida: ");
 		outputPortLabel.setLocation(400, 300);
 		outputPortLabel.setSize(200, 30);
 		
@@ -389,11 +420,10 @@ public class Main {
 		panelMaster.add(send);
 		
 		JTextArea textArea = new JTextArea(5, 20);
-		JScrollPane scrollPane = new JScrollPane(textArea);
-		textArea.setEditable(false);
-		scrollPane.setLocation(150, 450);
-		scrollPane.setSize(700, 200);
-		panelMaster.add(scrollPane);
+		//JScrollPane scrollPane = new JScrollPane(textArea);
+		textArea.setLocation(150, 450);
+		textArea.setSize(700, 200);
+		panelMaster.add(textArea);
 
 		JButton backButton = new JButton("Voltar");
 		backButton.setLocation(110,110);
@@ -401,6 +431,46 @@ public class Main {
 		panelMaster.add(backButton);
 		
 		frame.getContentPane().add(panelMaster);
-	}
+
+        /*System.out.println("Master IP: ");
+        String address = getString();
+
+        System.out.println("Master Port Number: ");
+        int masterPort = getInt();
+
+        System.out.println("Local port: ");
+        int localPort = getInt();
+
+
+        System.out.println("Output port: ");
+        int outPort = getInt();*/
+
+		
+		final Integer aux_id = id;
+		
+		send.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Node n = new Node(fieldIp.getText(), Integer.parseInt(portMaster.getText()), Integer.parseInt(localPort.getText()), Integer.parseInt(outputPort.getText()), aux_id, textArea);
+		        created.add(n);
+		        
+		        Thread t = new Thread(n);
+		        t.start();
+			}
+		});
+        
+    }
+    
+    private static BufferedImage resize(BufferedImage img, int height, int width) {
+        Image tmp = img.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        BufferedImage resized = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = resized.createGraphics();
+        g2d.drawImage(tmp, 0, 0, null);
+        g2d.dispose();
+        return resized;
+    }
+	
+
 
 }
