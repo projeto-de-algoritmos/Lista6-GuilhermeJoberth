@@ -99,57 +99,6 @@ public class Main {
         frame.setLayout(null);    
         frame.setVisible(true);
         
-
-        /*while (true){
-            System.out.println("0 - Quit");
-            System.out.println("1 - Master Node");
-            System.out.println("2 - Node");
-
-            int option = getInt();
-
-            if (option == 0){
-                break;
-            }else if (option == 1){
-
-                if (masterNode == null) {
-                    createMasterNode(ids);
-                    ids++;
-                }
-
-                while (true){
-
-                    System.out.println("0 - Back");
-                    System.out.println("1 - New Genetic Algorithm");
-
-                    option = getInt();
-
-                    if(option == 0) break;
-                    else if (option == 1){
-
-                        List<Restriction> restrictions = new LinkedList<>();
-
-                        restrictions.add(new RepeatedRestriction());
-                        restrictions.add(new HighSequenceRestriction());
-                        restrictions.add(new SequenceOfThreeRestriction());
-
-                        Algorithm alg = new GeneticAlgorithm(restrictions, ids, 150);
-                        System.out.println("[MAIN] Creating algorithm #" + ids);
-                        ids++;
-
-                        Thread t = new Thread(() -> masterNode.startAlgorithm(alg));
-                        t.start();
-                    }
-
-
-                }
-
-            } else if (option == 2){
-                createNode(ids);
-                ids++;
-            }
-
-        }*/
-        
         buttonMaster.addActionListener(new ActionListener() {
 			
 			@Override

@@ -19,337 +19,311 @@ import javax.swing.JTextArea;
 
 public abstract class AbstractNode implements Runnable {
 
+	Set<NodeConnection> connections;
 
-    Set<NodeConnection> connections;
+	private boolean execute = true;
+	JTextArea textArea;
 
-    private boolean execute = true;
-    protected JTextArea textArea;
+	ServerSocket inputSocket;
 
+	int outputPort;
 
-    ServerSocket inputSocket;
+	String id;
 
-    int outputPort;
+	Mutex connectionLock = new Mutex();
 
-    String id;
+	synchronized void processIntent(String intent, ObjectInputStream inputStream, Socket client)
+			throws IOException, ClassNotFoundException {
 
-    Mutex connectionLock = new Mutex();
+		log(id, "Processing intent: " + intent);
 
-    synchronized void processIntent(String intent, ObjectInputStream inputStream, Socket client) throws IOException, ClassNotFoundException {
+		if (intent.contains(Operations.MESSAGE)) {
 
+			String message = (String) inputStream.readObject();
 
-    	logTextArea(id, "Processing intent: " + intent, this.textArea);
-        log(id, "Processing intent: " + intent);
+			log(id, "Message: " + message);
 
-        if(intent.contains(Operations.MESSAGE)){
+			this.processMessage(message, client, inputStream);
 
-            String message = (String) inputStream.readObject();
+		}
 
-            logTextArea(id, "Message: " + message, this.textArea);
-            log(id, "Message: " + message);
+		if (intent.contains(Operations.OBJECT)) {
 
-            this.processMessage(message, client, inputStream);
+			String operation = (String) inputStream.readObject();
+			Object obj = inputStream.readObject();
 
-        }
+			log(id, "Object with operation: " + operation);
 
-        if(intent.contains(Operations.OBJECT)){
+			this.processObject(operation, obj, client, inputStream);
 
-            String operation = (String) inputStream.readObject();
-            Object obj = inputStream.readObject();
+		}
+	}
 
-            logTextArea(id, "Object with operation: " + operation, this.textArea);
-            log(id, "Object with operation: " + operation);
+	abstract void processObject(String operation, Object obj, Socket client, ObjectInputStream inputStream);
 
-            this.processObject(operation, obj, client, inputStream);
+	abstract JTextArea getTextArea();
+	
+	void processMessage(String message, Socket client, ObjectInputStream inputStream) {
 
-        }
-    }
+		if (message.contains(Operations.REGISTER)) {
 
-    abstract void processObject(String operation, Object obj, Socket client, ObjectInputStream inputStream);
+			this.registerNode(client, message);
 
-    void processMessage(String message, Socket client, ObjectInputStream inputStream){
+		} else if (message.contains(Operations.REMOVE)) {
 
-        if (message.contains(Operations.REGISTER)){
+			this.removeNode(message);
+		}
+	}
 
-            this.registerNode(client, message);
+	abstract boolean isMaster();
 
-        }else if (message.contains(Operations.REMOVE)){
+	protected Socket connectNode(NodeConnection c) {
 
-            this.removeNode(message);
-        }
-    }
+		log(id, "Connecting to Node: " + c.toString());
 
-    abstract boolean isMaster();
+		Socket s = null;
 
-    protected Socket connectNode(NodeConnection c) {
+		int tries = 0;
+		while (s == null && tries < 3) {
+			try {
 
-    	logTextArea(id, "Connecting to Node: " + c.toString(), this.textArea);
-        log(id, "Connecting to Node: " + c.toString());
+				s = new Socket();
+				s.setReuseAddress(true);
 
-        Socket s = null;
+				s.bind(new InetSocketAddress(this.inputSocket.getInetAddress(), this.outputPort));
+				s.connect(c.getSocketAddress());
 
-        int tries = 0;
-        while(s == null && tries < 3){
-            try {
+			} catch (BindException e) {
+				tries++;
+				log(id, "Coludn't connect to " + c.toString() + "," + " bind failed, port " + this.outputPort
+						+ "in use, trying again (" + tries + ")");
 
-                s = new Socket();
-                s.setReuseAddress(true);
+				if (tries == 3) {
+					e.printStackTrace();
+				}
 
-                s.bind(new InetSocketAddress(this.inputSocket.getInetAddress(), this.outputPort));
-                s.connect(c.getSocketAddress());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 
-            } catch (BindException e) {
-                tries++;
-                logTextArea(id, "Coludn't connect to " + c.toString() + "," +
-                        " bind failed, port " + this.outputPort +
-                        "in use, trying again ("+ tries +")", 
-                        this.textArea);
-                log(id, "Coludn't connect to " + c.toString() + "," +
-                        " bind failed, port " + this.outputPort +
-                        "in use, trying again ("+ tries +")");
+		return s;
+	}
 
-                if(tries == 3){
-                    e.printStackTrace();
-                }
+	public synchronized void sendAlgorithm(NodeConnection c, Algorithm alg) throws IOException {
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+		log(id, "Sending algorithm to node: " + c.toString());
 
-        return s;
-    }
+		String intent = Operations.OBJECT;
+		String message = Operations.EXECUTE_GENERATION;
 
-    public synchronized void sendAlgorithm(NodeConnection c, Algorithm alg) throws IOException {
+		Socket s = connectNode(c);
+		send(s, intent, message, alg);
+	}
 
-    	logTextArea(id, "Sending algorithm to node: " + c.toString(), this.textArea);
-        log(id, "Sending algorithm to node: " + c.toString());
+	synchronized void send(Socket s, String intent, String message, @Nullable Object o) throws IOException {
 
-        String intent = Operations.OBJECT;
-        String message = Operations.EXECUTE_GENERATION;
+		ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
 
-        Socket s = connectNode(c);
-        send(s, intent, message, alg);
-    }
+		out.writeObject(intent);
+		out.flush();
 
-    synchronized void send(Socket s, String intent, String message, @Nullable Object o) throws IOException{
+		out.writeObject(message);
+		out.flush();
 
-        ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+		if (o != null) {
+			out.writeObject(o);
+			out.flush();
+		}
 
-        out.writeObject(intent);
-        out.flush();
+		out.close();
+		s.close();
+	}
 
-        out.writeObject(message);
-        out.flush();
+	synchronized void answear(ObjectOutputStream out, String message) throws IOException {
 
-        if (o != null) {
-            out.writeObject(o);
-            out.flush();
-        }
+		out.writeObject(message);
+		out.flush();
+	}
 
-        out.close();
-        s.close();
-    }
+	synchronized void shareConnections(NodeConnection connection) {
 
-    synchronized void answear(ObjectOutputStream out, String message) throws IOException{
+		try {
+			send(connectNode(connection), Operations.OBJECT, Operations.CONNECTION_SHARE, this.connections);
 
-        out.writeObject(message);
-        out.flush();
-    }
+		} catch (IOException e) {
 
-    synchronized void shareConnections(NodeConnection connection){
+			e.printStackTrace();
+		}
+	}
 
-        try {
-            send(connectNode(connection), Operations.OBJECT, Operations.CONNECTION_SHARE, this.connections);
+	synchronized void registerNode(Socket client, String address) {
 
-        } catch (IOException e){
+		address = address.replaceAll(Operations.REGISTER, "");
+		String[] parts = address.split(":");
 
-            e.printStackTrace();
-        }
-    }
+		log(id, "Registering new connection to: " + client.toString());
 
-    synchronized void registerNode(Socket client, String address) {
+		String ip = client.getInetAddress().getHostAddress().toString();
+		int port = Integer.parseInt(parts[1]);
 
-        address = address.replaceAll(Operations.REGISTER, "");
-        String[] parts = address.split(":");
+		NodeConnection connection = null;
 
-        logTextArea(id, "Registering new connection to: " + client.toString(), this.textArea);
-        log(id, "Registering new connection to: " + client.toString());
+		try {
 
-        String ip = client.getInetAddress().getHostAddress().toString();
-        int port = Integer.parseInt(parts[1]);
+			connection = new NodeConnection(ip, port);
+			this.connections.add(connection);
 
-        NodeConnection connection = null;
+			log(id, "Node added: " + connection.toString());
 
-        try {
+			printCurrentNodes();
 
-            connection = new NodeConnection(ip, port);
-            this.connections.add(connection);
+			shareConnections(connection);
 
-            logTextArea(id, "Node added: " + connection.toString(), this.textArea);
-            log(id, "Node added: " + connection.toString());
+		} catch (UnknownHostException e) {
 
-            printCurrentNodes();
+			log(id, "Unknow host");
+			e.printStackTrace();
+		}
+	}
 
-            shareConnections(connection);
+	synchronized void removeNode(String address) {
 
-        } catch (UnknownHostException e) {
+		address = address.replaceAll(Operations.REMOVE, "");
+		String[] parts = address.split(":");
 
-        	logTextArea(id, "Unknow host", this.textArea);
-            log(id, "Unknow host");
-            e.printStackTrace();
-        }
-    }
+		String ip = parts[0];
+		int port = Integer.parseInt(parts[1]);
 
-    synchronized void removeNode(String address){
+		try {
+			NodeConnection comparator = new NodeConnection(ip, port);
 
-        address = address.replaceAll(Operations.REMOVE, "");
-        String[] parts = address.split(":");
+			Iterator<NodeConnection> itr = connections.iterator();
+			while (itr.hasNext()) {
 
-        String ip = parts[0];
-        int port = Integer.parseInt(parts[1]);
+				NodeConnection c = itr.next();
+				if (c.getPort() == comparator.getPort() && c.getIp().equals(comparator.getIp())) {
+					connections.remove(c);
 
-        try {
-            NodeConnection comparator = new NodeConnection(ip, port);
+					log(id, "Node removed: " + c.toString());
+				}
 
-            Iterator<NodeConnection> itr = connections.iterator();
-            while(itr.hasNext()) {
+			}
 
-                NodeConnection c = itr.next();
-                if(c.getPort() == comparator.getPort() && c.getIp().equals(comparator.getIp())){
-                    connections.remove(c);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+	}
 
-                    logTextArea(id, "Node removed: " + c.toString(), this.textArea);
-                    log(id, "Node removed: " + c.toString());
-                }
+	synchronized void passAlgorithm(Algorithm algorithm) {
 
-            }
+		log(id, "Trying to send algorithm");
 
+		boolean sent = false;
 
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
-    }
+		List<NodeConnection> shuffled = new LinkedList<>(connections);
+		Collections.shuffle(shuffled);
 
-    synchronized void passAlgorithm(Algorithm algorithm){
+		Iterator<NodeConnection> itr = shuffled.iterator();
+		while (itr.hasNext()) {
 
-    	logTextArea(id, "Trying to send algorithm", this.textArea);
-        log(id, "Trying to send algorithm");
+			NodeConnection c = itr.next();
 
-        boolean sent = false;
+			try {
 
-        List<NodeConnection> shuffled = new LinkedList<>(connections);
-        Collections.shuffle(shuffled);
+				log(id, "Sending algorithm to node: " + c.toString());
 
-        Iterator<NodeConnection> itr = shuffled.iterator();
-        while(itr.hasNext()) {
+				String intent = Operations.OBJECT;
+				String message = Operations.EXECUTE_GENERATION;
 
-            NodeConnection c = itr.next();
+				send(connectNode(c), intent, message, algorithm);
+				sent = true;
+				break;
 
-            try {
-            	
-            	logTextArea(id, "Sending algorithm to node: " + c.toString(), this.textArea);
-                log(id, "Sending algorithm to node: " + c.toString());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 
-                String intent = Operations.OBJECT;
-                String message = Operations.EXECUTE_GENERATION;
+		if (!sent && !isMaster()) { // not sent and node
 
-                send(connectNode(c), intent, message, algorithm);
-                sent = true;
-                break;
+			log(id, "Couldn't send algorithm to any connection, returning to Master Node");
+			Node n = (Node) this;
+			n.sendAlgorithmToMaster(algorithm);
 
-            }catch (IOException e){
-                e.printStackTrace();
-            }
-        }
+		} else if (!sent) { // not sent and master
 
-        if (!sent && !isMaster()){ // not sent and node
+			log(id, "All nodes busy, waiting 5 seconds to send again");
+			try {
+				Thread.sleep(5000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			passAlgorithm(algorithm);
+		}
+	}
 
-        	logTextArea(id, "Couldn't send algorithm to any connection, returning to Master Node", this.textArea);
-            log(id, "Couldn't send algorithm to any connection, returning to Master Node");
-            Node n = (Node) this;
-            n.sendAlgorithmToMaster(algorithm);
+	public synchronized void end() {
 
-        }else if (!sent){ // not sent and master
-        	
-        	logTextArea(id, "All nodes busy, waiting 5 seconds to send again", this.textArea);
-            log(id, "All nodes busy, waiting 5 seconds to send again");
-            try {
-                Thread.sleep(5000); } catch (InterruptedException e) { e.printStackTrace(); }
-            passAlgorithm(algorithm);
-        }
-    }
+		this.execute = false;
 
+		try {
+			log(id, "Closing Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":"
+					+ inputSocket.getLocalPort());
+			this.inputSocket.close();
 
-    public synchronized void end(){
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
-        this.execute = false;
+	void log(String id, String message) {
 
-        try {
-        	logTextArea(id, "Closing Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + inputSocket.getLocalPort(), this.textArea);
-            log(id, "Closing Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + inputSocket.getLocalPort());
-            this.inputSocket.close();
+		System.out.println("[" + id + "]" + message);
+		this.getTextArea().append("[" + id + "]" + message + "\n");
+	}
+	
+	synchronized void printCurrentNodes() {
+		String str = "";
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+		for (NodeConnection connection : connections) {
+			str += "\n" + connection.toString();
+		}
+		log(id, "Current connections (" + connections.size() + "):" + str + "\n");
 
-    static void log(String id, String message){
+	}
+	
 
-        System.out.println("[" + id + "]" + message);
+	@Override
+	public void run() {
 
-    }
-    
-    static void logTextArea(String id, String message, JTextArea textArea){
+		final AbstractNode self = this;
 
-        textArea.append("[" + id + "]" + message + "\n");
+		while (execute) {
 
-    }
+			try {
 
-    synchronized void printCurrentNodes(){
-        String str = "";
+				log(id, "Awaiting connections...");
+				connectionLock.lock();
+				Socket client = this.inputSocket.accept();
 
-        for (NodeConnection connection : connections) {
-            str += "\n" + connection.toString();
-        }
-        logTextArea(id, "Current connections (" + connections.size() + "):" + str + "\n", this.textArea);
-        log(id, "Current connections (" + connections.size() + "):" + str + "\n");
+				log(id, "socket conected from: " + client.getInetAddress().getHostAddress() + ":" + client.getPort());
 
-    }
+				ObjectInputStream inputStream = new ObjectInputStream(client.getInputStream());
+				String intent = (String) inputStream.readObject();
 
-    @Override
-    public void run() {
+				self.processIntent(intent, inputStream, client);
 
-        final AbstractNode self = this;
+				log(id, "Closing socket: " + client.toString());
+				client.close();
 
-        while(execute) {
-
-            try {
-
-            	logTextArea(id, "Awaiting connections...", this.textArea);
-                log(id, "Awaiting connections...");
-                connectionLock.lock();
-                Socket client = this.inputSocket.accept();
-
-                logTextArea(id, "socket conected from: " + client.getInetAddress().getHostAddress() + ":" + client.getPort(), this.textArea);
-                log(id, "socket conected from: " + client.getInetAddress().getHostAddress() + ":" + client.getPort());
-
-                ObjectInputStream inputStream = new ObjectInputStream(client.getInputStream());
-                String intent = (String) inputStream.readObject();
-
-                self.processIntent(intent, inputStream, client);
-                
-                logTextArea(id, "Closing socket: " + client.toString(), this.textArea);
-                log(id, "Closing socket: " + client.toString());
-                client.close();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            } finally {
-                connectionLock.unlock();
-            }
-        }
-    }
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} finally {
+				connectionLock.unlock();
+			}
+		}
+	}
 }

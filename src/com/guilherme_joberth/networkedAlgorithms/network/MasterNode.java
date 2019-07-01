@@ -27,8 +27,7 @@ public class MasterNode extends AbstractNode {
             this.inputSocket.setReuseAddress(true);
 
             this.id = "NODE#" + id + ":" + inputSocket.getLocalPort();
-            logTextArea(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + localPort, this.textArea);
-            log(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + localPort);
+            log(this.id, "Creating MasterNode Socket on: " + inputSocket.getInetAddress().getHostAddress() + ":" + inputSocket.getLocalPort());
 
         } catch (SocketException e) {
             e.printStackTrace();
@@ -41,13 +40,17 @@ public class MasterNode extends AbstractNode {
     boolean isMaster() {
         return true;
     }
+    
+    @Override
+    JTextArea getTextArea() {
+    	return this.textArea;
+    }
 
     @Override
     void processMessage(String message, Socket client, ObjectInputStream inputStream){
     
         if(message.contains(Operations.GET_PUBLIC_ADDRESS)){
-        	logTextArea(id, "On socket " + client.toString() + " received request of public address", this.textArea);
-            log(id, "On socket " + client.toString() + " received request of public address");
+        	log(id, "On socket " + client.toString() + " received request of public address");
 
             String[] parts = message.split(":");
             int port = Integer.parseInt(parts[1]);
@@ -57,7 +60,6 @@ public class MasterNode extends AbstractNode {
             
                 NodeConnection connection = new NodeConnection(address, port);
 
-                logTextArea(id, "Sending " + connection.toString() + " as answear", this.textArea);
                 log(id, "Sending " + connection.toString() + " as answear");
                 
                 answear(new ObjectOutputStream(client.getOutputStream()), connection.getIp());
@@ -106,20 +108,17 @@ public class MasterNode extends AbstractNode {
 
         if (algorithm == null){
         	
-        	logTextArea(id, "Sent algorithm", this.textArea);
-            log(id, "Sent algorithm");
+        	log(id, "Sent algorithm");
         }else{
         	
-        	logTextArea(id, "couldn't sent algorithm anywhere!!! - lost", this.textArea);
-            log(id, "couldn't sent algorithm anywhere!!! - lost");
+        	log(id, "couldn't sent algorithm anywhere!!! - lost");
         }
 
     }
 
     public synchronized void startAlgorithm(Algorithm alg){
 
-    	logTextArea(id, "Starting algorithm#" + alg.getId(), this.textArea);
-        log(id, "Starting algorithm#" + alg.getId());
+    	log(id, "Starting algorithm#" + alg.getId());
         passAlgorithm(alg);
 
     }

@@ -40,7 +40,6 @@ public class Node extends AbstractNode  {
             this.localPort = inputSocket.getLocalPort();
             
             this.id = "NODE#" + id + ":" + localPort;
-            logTextArea(this.id, "Creating Node Socket on " + inputSocket.getInetAddress().getHostAddress() + ":" + this.localPort, textArea);
             log(this.id, "Creating Node Socket on " + inputSocket.getInetAddress().getHostAddress() + ":" + this.localPort);
             
             this.masterNodeIP = InetAddress.getByName(masterNodeAddress);
@@ -61,10 +60,14 @@ public class Node extends AbstractNode  {
             e.printStackTrace();
         }
     }
+    
+    @Override
+    JTextArea getTextArea() {
+    	return this.textArea;
+    }
 
     private void askForPublicAddress() throws IOException, ClassNotFoundException {
 
-    	logTextArea(this.id, "Asking for public ip...", textArea);
         log(this.id, "Asking for public ip...");
 
         Socket master = this.connectMaster();
@@ -76,14 +79,12 @@ public class Node extends AbstractNode  {
 
         this.localIP = (String) in.readObject();
 
-        logTextArea(id, "This IP is: " + this.localIP , textArea);
         log(id, "This IP is: " + this.localIP);
 
         master.close();
     }
 
     private Socket connectMaster() throws IOException {
-    	logTextArea(id, "Connecting to master node", this.textArea);
     	log(id, "Connecting to master node");
 
         NodeConnection masterNode = new NodeConnection(this.masterNodeIP.getHostAddress(), this.masterNodePort);
@@ -99,7 +100,6 @@ public class Node extends AbstractNode  {
     @Override
     public synchronized void end() {
 
-    	logTextArea(id, "ending node", this.textArea);
         log(id, "ending node");
 
         String intent = Operations.MESSAGE;
@@ -113,7 +113,6 @@ public class Node extends AbstractNode  {
         } catch (IOException e) {
 
             e.printStackTrace();
-            logTextArea(id, "Couldn't remove connection from master", this.textArea);
             log(id, "Couldn't remove connection from master");
         }
 
@@ -122,7 +121,6 @@ public class Node extends AbstractNode  {
 
     private void registerOnMasterNode() throws IOException {
 
-    	logTextArea(id, "Registering on master node\n", this.textArea);
         log(id, "Registering on master node");
 
         String intent = Operations.MESSAGE;
@@ -134,7 +132,6 @@ public class Node extends AbstractNode  {
 
     private void registerOnNode(NodeConnection c) throws IOException {
 
-    	logTextArea(id, "Registering on node" + c.toString(), this.textArea);
         log(id, "Registering on node" + c.toString());
 
         String intent = Operations.MESSAGE;
@@ -145,7 +142,6 @@ public class Node extends AbstractNode  {
 
     void sendAlgorithmToMaster(Algorithm alg){
 
-    	logTextArea(id, "Sending algorithm " + alg.getId() + " directly to master", this.textArea);
         log(id, "Sending algorithm " + alg.getId() + " directly to master");
 
         try{
@@ -163,8 +159,7 @@ public class Node extends AbstractNode  {
 
     void executeAlgorithm(Algorithm algorithm){
     	
-    	logTextArea(id, "Starting processing of algorithm " + algorithm.getId() + " in another thread", this.textArea);
-        log(id, "Starting processing of algorithm " + algorithm.getId() + " in another thread");
+    	log(id, "Starting processing of algorithm " + algorithm.getId() + " in another thread");
 
         this.t_runner = new Thread(new AlgorithmRunner(algorithm, this));
         t_runner.start();
@@ -190,7 +185,6 @@ public class Node extends AbstractNode  {
 
             Set<NodeConnection> received = (Set<NodeConnection>) o;
 
-            logTextArea(id, "Received " + received.size() + " shared connections", this.textArea);
             log(id, "Received " + received.size() + " shared connections");
 
             try {
@@ -212,7 +206,6 @@ public class Node extends AbstractNode  {
                     }
                 }
                 
-                logTextArea(id, "Added new " + added + " connections", this.textArea);
                 log(id, "Added new " + added + " connections");
                 printCurrentNodes();
 
@@ -232,7 +225,6 @@ public class Node extends AbstractNode  {
     
         if(message.contains(Operations.GET_PUBLIC_ADDRESS)){
 
-        	logTextArea(id, "Received public address in message: " + message, this.textArea);
             log(id, "Received public address in message: " + message);
 
             String[] parts = message.split(":");
@@ -252,7 +244,6 @@ public class Node extends AbstractNode  {
 
         Algorithm algorithm = runner.getAlgorithm();
 
-        logTextArea(id, "Generation #" + algorithm.getStatus() + " processed", this.textArea);
         log(id, "Generation #" + algorithm.getStatus() + " processed");
 
 
